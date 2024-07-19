@@ -1,0 +1,152 @@
+:root {
+    --modal-duration: 1s;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+}
+
+body {
+    display: flex;
+    height: 100vh;
+    background-color: #242424;
+    transition: transform 0.3s ease;
+}
+
+.sidebar {
+    width: 250px;
+    background-color: rgb(46, 46, 108);
+    color: white;
+    transition: width 0.3s;
+    overflow: hidden;
+}
+
+.sidebar .logo {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+}
+
+.sidebar .logo img {
+    width: 45px;
+}
+
+.sidebar .logo span {
+    font-size: 1.2em;
+    white-space: nowrap;
+}
+
+.sidebar .nav {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar .nav li {
+    padding: 10px 20px;
+}
+
+.sidebar .nav a {
+    color: white;
+    text-decoration: none;
+    display: block;
+}
+
+.sidebar .nav a:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.sidebar .dropdown .vm-list {
+    display: none;
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar .dropdown:hover .vm-list {
+    display: block;
+}
+
+.sidebar .vm-list li {
+    padding-left: 30px;
+}
+
+.main-content {
+    flex: 1;
+    padding: 20px;
+}
+
+.log-window {
+    width: 80%;
+    height: 80%;
+    background-color: #333;
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+}
+
+.log-content {
+    margin-top: 10px;
+}
+
+.log-title {
+    color: white;
+    padding-bottom: 20px;
+}
+
+.popup-container {
+    background-color: rgba(0, 0, 0, 0.6);
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    justify-content: center;
+    align-items: center;
+    border-radius: 10px;
+    padding: 20px;
+}
+
+.container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    width: 40%;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    position:absolute;
+    overflow: hidden;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.container-content {
+    padding: 20px;
+}
+
+.form-content div {
+    margin: 20px 0;
+}
+
+.form-content label {
+    display: block;
+    margin-bottom: 6px;
+}
+
+.form-input {
+    padding: 8px;
+    width: 100%;
+}
+
+.close-btn {
+    background: transparent;
+    border: none;
+    font-size: 25px;
+    position: absolute;
+    top: 5px;
+    right: 12px;
+    cursor: pointer;
+}

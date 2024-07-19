@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unikraft WebUI</title>
+    <link rel="stylesheet" href="style.css">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+</head>
+
+<body>
+    <aside class="sidebar" id="sidebar">
+        <div class="logo">
+            <img src="https://emojiisland.com/cdn/shop/products/Monkey_Emoji_grande.png?v=1571606065" alt="Logo">
+            <span>Unikraft WebUI</span>
+        </div>
+
+        <ul class="nav">
+            <li>
+                <a href="#">
+                    <i class='bx bxs-dashboard'></i>
+                    <span class="nav-item">Home</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="#">
+                    <i class='bx bx-message-square'></i>
+                    <span class="nav-item">Templates</span>
+                </a>
+            </li>
+
+            <li>
+                <a href="#" id="add-vm">
+                    <i class='bx bx-plus'></i>
+                    <span class="nav-item">Add VM</span>
+                </a>
+            </li>
+
+            <li class="dropdown">
+                <a href="#">
+                    <i class='bx bx-desktop'></i>
+                    <span class="nav-item">Virtual Machines</span>
+                </a>
+                <ul class="vm-list">
+                    <li><a href="#">VM1</a></li>
+                    <li><a href="#">VM2</a></li>
+                    <li><a href="#">VM3</a></li>
+                </ul>
+            </li>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <h2 class="log-title">Log</h2>
+        <div class="log-window">
+            <div class="log-content">
+                Log content.
+                asdk
+                akdjsfnvbdg
+                akjsfhdgb
+                kajhbsf
+            </div>
+        </div>
+    </main>
+
+    <section class="popup-container" id="popup">
+        <section class="container">
+            <button class="close-btn" id="close-popup">x</button>
+            <div class="container-content">
+                <h2>Add VM</h2>
+                <form class="form-content">
+                    <div>
+                        <label for="vm-name">Name:</label>
+                        <input
+                         type="text"
+                         id="vm-name"
+                         placeholder="Enter Name"
+                         class="form-input"
+                         required>
+                    </div>
+                    
+                    <div>
+                        <label for="vm-file">Upload File:</label>
+                        <input
+                         type="file"
+                         id="vm-file"
+                         placeholder="Add File"
+                         class="form-input"
+                         required>
+                    </div>
+                    
+                    <div>
+                        <button type="submit">Submit</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+    </section>
+    
+    <script>
+        const addVmBtn = document.getElementById('add-vm');
+        const popup = document.getElementById('popup');
+        const closePopupBtn = document.getElementById('close-popup');
+
+        addVmBtn.addEventListener('click', () => popup.style.display = 'flex'
+        );
+
+        closePopupBtn.addEventListener('click', () => popup.style.display = 'none'
+        );
+    </script>
+</body>
+</html>
