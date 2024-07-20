@@ -36,15 +36,11 @@
             </li>
     
             <li class="dropdown">
-                <a href="vms.html">
+                <a href="#">
                     <i class='bx bx-desktop'></i>
                     <span class="nav-item">Virtual Machines</span>
                 </a>
-                <ul class="vm-list">
-                    <li><a href="#">VM1</a></li>
-                    <li><a href="#">VM2</a></li>
-                    <li><a href="#">VM3</a></li>
-                </ul>
+                <ul class="vm-list"></ul>
             </li>
         </ul>
     </aside>
@@ -54,7 +50,7 @@
             <button class="close-btn" id="close-popup">x</button>
             <div class="container-content">
                 <h2>Add VM</h2>
-                <form class="form-content">
+                <form class="form-content" id="form-content">
                     <div>
                         <label for="vm-name">Name:</label>
                         <input
@@ -62,6 +58,7 @@
                          id="vm-name"
                          placeholder="Enter Name"
                          class="form-input"
+                         name="name"
                          required>
                     </div>
                     
@@ -72,6 +69,7 @@
                          id="vm-file"
                          placeholder="Add File"
                          class="form-input"
+                         name="vm"
                          required>
                     </div>
                     

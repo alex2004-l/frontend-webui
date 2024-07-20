@@ -6,7 +6,7 @@
     <title>Unikraft WebUI</title>
     <link rel="stylesheet" href="style.css">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-    
+    <link rel="stylesheet" href="xterm/xterm.css" />
 </head>
 
 <body>
@@ -14,63 +14,88 @@
 
     <main class="main-content">
         <div class="log-header">
-            <h2 class="log-title">Log</h2>
+            <h2 class="log-title" id="vm-title">Log</h2>
             <button class="vm-btn" id="vm-btn">Start</button>
         </div>
         <div class="log-window">
             <div class="log-content">
-                Log content.
+                <div class="terminal" id="terminal"></div>
             </div>
         </div>
     </main>
-
-    <section class="popup-container" id="popup">
-        <section class="container">
-            <button class="close-btn" id="close-popup">x</button>
-            <div class="container-content">
-                <h2>Add VM</h2>
-                <form class="form-content">
-                    <div>
-                        <label for="vm-name">Name:</label>
-                        <input
-                         type="text"
-                         id="vm-name"
-                         placeholder="Enter Name"
-                         class="form-input"
-                         required>
-                    </div>
-                    
-                    <div>
-                        <label for="vm-file">Upload File:</label>
-                        <input
-                         type="file"
-                         id="vm-file"
-                         placeholder="Add File"
-                         class="form-input"
-                         required>
-                    </div>
-                    
-                    <div>
-                        <button type="submit">Submit</button>
-                    </div>
-                </form>
-            </div>
-        </section>
-    </section>
-    
-    <script src="loadSidebar.js"></script>
-    <script>
-        const vmBtn = document.getElementById('vm-btn');
-
-        vmBtn.addEventListener('click', () => {
-            if (vmBtn.textContent === "Start") {
-                vmBtn.textContent = "Stop";
-                vmBtn.style.backgroundColor = 'red';
-            } else {
-                vmBtn.textContent = "Start";
-                vmBtn.style.backgroundColor = 'green';
-            }
-        });
-    </script>
 </body>
+
+<script src="loadSidebar.js"></script>
+<script src="xterm/xterm.js"></script>
+<script>
+    let terminals = {};
+
+    function createTerminal(vmName) {
+        const terminal = new Terminal({convertEol: true});
+        terminal.open(document.getElementById('terminal'));
+
+        // WebSocket connection
+        const socket = new WebSocket(`ws://127.0.0.1:8081/api/v1/ws/${vmName}/`);
+
+        // Handle incoming messages
+        socket.onmessage = function(event) {
+            terminal.write(event.data);
+        };
+
+        // Handle connection open event
+        socket.onopen = function() {
+            terminal.writeln('Connected to WebSocket server');
+        };
+
+        // Handle connection close event
+        socket.onclose = function() {
+            terminal.writeln('Disconnected from WebSocket server');
+        };
+
+        // Handle connection error event
+        socket.onerror = function(error) {
+            terminal.writeln('WebSocket error: ' + error.message);
+        };
+
+        // Handle terminal input
+        terminal.onData(function(data) {
+            socket.send(data);
+        });
+
+        terminals[vmName] = term;
+    }
+
+    function switchTerminal(vmName) {
+        document.getElementById('vm-title').textContent = `Log: ${vmName}`;
+        if (terminals[vmName]) {
+            terminals[vmName].focus();
+        } else {
+            createTerminal(vmName);
+        }
+    }
+
+    function getVMNameFromURL() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('vm');
+    }
+
+    const vmName = getVMNameFromURL();
+    if (vmName) {
+        switchTerminal(vmName);
+    }
+
+    const vmBtn = document.getElementById('vm-btn');
+    vmBtn.addEventListener('click', () => {
+        const currentTerm = terminals[vmName];
+        if (vmBtn.textContent === "Start") {
+            vmBtn.textContent = "Stop";
+            vmBtn.style.backgroundColor = 'red';
+            currentTerm.write(`\r\n${vmName} started\r\n`);
+        } else {
+            vmBtn.textContent = "Start";
+            vmBtn.style.backgroundColor = 'green';
+            currentTerm.write(`\r\n${vmName} stopped\r\n`);
+        }
+    });
+</script>
 </html>
