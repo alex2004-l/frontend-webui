@@ -22,6 +22,9 @@ var addr = flag.String("addr", "localhost:8081", "Listening address")
 
 var db = sqlx.MustConnect("sqlite3", "pipi_pupu.sqlite3")
 
+func enableCors(w *http.ResponseWriter) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+}
 func KraftSendError(w http.ResponseWriter, errStr string, code int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
@@ -32,6 +35,7 @@ func KraftSendError(w http.ResponseWriter, errStr string, code int) {
 }
 
 func KraftStopVM(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	vmName := r.PathValue("vm_name")
 
 	var id string
@@ -103,6 +107,7 @@ var chanChanHandler = make(chan ChanInitMsg)
 
 func KraftUploadVM(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(10 << 20) // 10 MB max memory
+	enableCors(&w)
 	if err != nil {
 		fmt.Fprintf(w, "Error parsing form: %v", err)
 		return
@@ -271,6 +276,7 @@ type KraftInstance struct {
 }
 
 func KraftStartVM(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	vmName := r.PathValue("vm_name")
 
 	var id string
@@ -296,8 +302,9 @@ type VmList struct {
 }
 
 func KraftListVM(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	var rows []string
-	err := db.Select(&rows, `SELECT id FROM name_to_id`)
+	err := db.Select(&rows, `SELECT name FROM name_to_id`)
 
 	if err != nil {
 		panic("j1290djsok")
