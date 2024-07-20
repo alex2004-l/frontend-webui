@@ -6,53 +6,17 @@
     <title>Unikraft WebUI</title>
     <link rel="stylesheet" href="style.css">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    
 </head>
 
 <body>
-    <aside class="sidebar" id="sidebar">
-        <div class="logo">
-            <img src="https://emojiisland.com/cdn/shop/products/Monkey_Emoji_grande.png?v=1571606065" alt="Logo">
-            <span>Unikraft WebUI</span>
-        </div>
-
-        <ul class="nav">
-            <li>
-                <a href="#">
-                    <i class='bx bxs-dashboard'></i>
-                    <span class="nav-item">Home</span>
-                </a>
-            </li>
-
-            <li>
-                <a href="#">
-                    <i class='bx bx-message-square'></i>
-                    <span class="nav-item">Templates</span>
-                </a>
-            </li>
-
-            <li>
-                <a href="#" id="add-vm">
-                    <i class='bx bx-plus'></i>
-                    <span class="nav-item">Add VM</span>
-                </a>
-            </li>
-
-            <li class="dropdown">
-                <a href="#">
-                    <i class='bx bx-desktop'></i>
-                    <span class="nav-item">Virtual Machines</span>
-                </a>
-                <ul class="vm-list">
-                    <li><a href="#">VM1</a></li>
-                    <li><a href="#">VM2</a></li>
-                    <li><a href="#">VM3</a></li>
-                </ul>
-            </li>
-        </ul>
-    </aside>
+    <aside id="sidebar-container"></aside>
 
     <main class="main-content">
-        <h2 class="log-title">Log</h2>
+        <div class="log-header">
+            <h2 class="log-title">Log</h2>
+            <button class="vm-btn" id="vm-btn">Start</button>
+        </div>
         <div class="log-window">
             <div class="log-content">
                 Log content.
@@ -94,14 +58,19 @@
         </section>
     </section>
     
+    <script src="loadSidebar.js"></script>
     <script>
-        const addVmBtn = document.getElementById('add-vm');
-        const popup = document.getElementById('popup');
-        const closePopupBtn = document.getElementById('close-popup');
+        const vmBtn = document.getElementById('vm-btn');
 
-        addVmBtn.addEventListener('click', () => popup.style.display = 'flex');
-
-        closePopupBtn.addEventListener('click', () => popup.style.display = 'none');
+        vmBtn.addEventListener('click', () => {
+            if (vmBtn.textContent === "Start") {
+                vmBtn.textContent = "Stop";
+                vmBtn.style.backgroundColor = 'red';
+            } else {
+                vmBtn.textContent = "Start";
+                vmBtn.style.backgroundColor = 'green';
+            }
+        });
     </script>
 </body>
 </html>
