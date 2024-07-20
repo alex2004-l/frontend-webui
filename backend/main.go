@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -25,33 +26,26 @@ func KraftSendError(w http.ResponseWriter, errStr string, code int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 
-	js, err := json.Marshal(ApiError{
+	json.NewEncoder(w).Encode(ApiError{
 		Err: errStr,
 	})
-
-	if err != nil {
-		panic("Failed to marshal json")
-	}
-
-	json.NewEncoder(w).Encode(js)
 }
 
 func KraftStopVM(w http.ResponseWriter, r *http.Request) {
 	vmName := r.PathValue("vm_name")
 
 	var id string
-	row := db.QueryRow(`SELECT id WHERE name = ?`, vmName)
-	err := row.Scan(&id)
-
+	err := db.Get(&id, `SELECT id FROM name_to_id WHERE name = ?`, vmName)
 	if err != nil {
 		KraftSendError(w, "VM not found", http.StatusNotFound)
 		return
 	}
 
+	log.Printf("Starting %s", id)
 	err = exec.Command("kraft", "cloud", "instance", "stop", id).Run()
 
 	if err != nil {
-		KraftSendError(w, "Failed to stop VM", http.StatusNotFound)
+		KraftSendError(w, "Failed to start VM", http.StatusNotFound)
 		return
 	}
 
@@ -79,11 +73,46 @@ type KraftAppInfo struct {
 	Version    string `json:"version"`
 }
 
+type chanWriter struct {
+	w  io.Writer
+	ch chan []byte
+}
+
+func (e chanWriter) Write(p []byte) (int, error) {
+	b := make([]byte, len(p))
+	log.Printf("WE GUCCING ZA MESSAGE\n")
+	copy(b, p)
+
+	e.ch <- b
+
+	return len(p), nil
+}
+
+func NewChanWriter() *chanWriter {
+	return &chanWriter{
+		ch: make(chan []byte, 128),
+	}
+}
+
+type ChanInitMsg struct {
+	id string
+	ch *chanWriter
+}
+
+var chanChanHandler = make(chan ChanInitMsg)
+
 func KraftUploadVM(w http.ResponseWriter, r *http.Request) {
-	// Create tempfs folder
-	vmName := r.PathValue("vm_name")
+	err := r.ParseMultipartForm(10 << 20) // 10 MB max memory
+	if err != nil {
+		fmt.Fprintf(w, "Error parsing form: %v", err)
+		return
+	}
+
+	file, handler, err := r.FormFile("vm")
+	vmName := r.FormValue("name")
 	tempDir := fmt.Sprintf("build-cache-%s", vmName)
 
+	// Create tempfs folder
 	for {
 		err := os.Mkdir(tempDir, os.FileMode(0755))
 		if os.IsExist(err) {
@@ -96,13 +125,6 @@ func KraftUploadVM(w http.ResponseWriter, r *http.Request) {
 		break
 	}
 
-	err := r.ParseMultipartForm(10 << 20) // 10 MB max memory
-	if err != nil {
-		fmt.Fprintf(w, "Error parsing form: %v", err)
-		return
-	}
-
-	file, handler, err := r.FormFile("vm")
 	if err != nil {
 		fmt.Fprintf(w, "Error retrieving file: %v", err)
 		return
@@ -136,11 +158,18 @@ func KraftUploadVM(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	cw := NewChanWriter()
+
 	log.Printf("wrote %d for %s", written, vmName)
 
+	chanChanHandler <- ChanInitMsg{
+		id: vmName,
+		ch: cw,
+	}
+
 	cmd := exec.Command("7z", "x", fmt.Sprintf("%s.zip", tempFile))
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = cw
+	cmd.Stderr = cw
 	cmd.Dir = tempDir
 
 	err = cmd.Run()
@@ -157,8 +186,8 @@ func KraftUploadVM(w http.ResponseWriter, r *http.Request) {
 	imageName := fmt.Sprintf("index.unikraft.io/lbud/%s:latest", vmName)
 
 	cmd = exec.Command("kraft", "pkg", "--name", imageName, "--push")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = cw
+	cmd.Stderr = cw
 	cmd.Dir = tempDir
 	err = cmd.Run()
 
@@ -193,7 +222,7 @@ func KraftUploadVM(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	cmd = exec.Command("kraft", "cloud", "instance", "create", baseName, "-o", "json")
+	cmd = exec.Command("kraft", "cloud", "instance", "create", "-M", "1024", baseName, "-o", "json")
 	cmd.Dir = tempDir
 	data, err := cmd.Output()
 
@@ -251,6 +280,7 @@ func KraftStartVM(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("Starting %s", id)
 	err = exec.Command("kraft", "cloud", "instance", "start", id).Run()
 
 	if err != nil {
@@ -279,6 +309,9 @@ func KraftListVM(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(&VmList{Names: rows})
 }
 
+var upgrader = websocket.Upgrader{} // use default options
+var chanMap = make(map[string]*chanWriter)
+
 func main() {
 	db.MustExec(`
 	CREATE TABLE IF NOT EXISTS name_to_id (
@@ -288,10 +321,82 @@ func main() {
 
 	flag.Parse()
 
-	http.HandleFunc("/{vm_name}/build", KraftUploadVM)
-	http.HandleFunc("/{vm_name}/start", KraftStartVM)
-	http.HandleFunc("/{vm_name}/stop", KraftStopVM)
-	http.HandleFunc("/list", KraftListVM)
+	api := http.NewServeMux()
+	v1 := http.NewServeMux()
+	vm := http.NewServeMux()
+	ws := http.NewServeMux()
 
-	log.Fatal(http.ListenAndServe(*addr, nil))
+	ws.HandleFunc("/{id}/", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		log.Printf("HANDLIN %s", id)
+		c, err := upgrader.Upgrade(w, r, nil)
+
+		if err != nil {
+			log.Print("upgrade:", err)
+			return
+		}
+
+		c.WriteMessage(1, []byte("Hello"))
+
+		var ch *chanWriter
+
+		for {
+			cha, ok := chanMap[id]
+			if ok {
+				ch = cha
+				break
+			} else {
+				log.Print("missing chan")
+				time.Sleep(time.Second * 1)
+			}
+		}
+
+		handler := func(c *websocket.Conn, ch *chanWriter) {
+			defer c.Close()
+
+			for {
+				msg, ok := <-ch.ch
+
+				if !ok {
+					break
+				}
+
+				c.WriteMessage(1, msg)
+			}
+
+		}
+
+		go handler(c, ch)
+	})
+
+	api.Handle("/api/", http.StripPrefix("/api", v1))
+
+	v1.Handle("/v1/vm/", http.StripPrefix("/v1/vm", vm))
+	v1.Handle("/v1/ws/", http.StripPrefix("/v1/ws", ws))
+
+	vm.HandleFunc("POST /build", KraftUploadVM)
+	vm.HandleFunc("POST /{vm_name}/start", KraftStartVM)
+	vm.HandleFunc("POST /{vm_name}/stop", KraftStopVM)
+	vm.HandleFunc("GET /list", KraftListVM)
+
+	meme := func() {
+		for {
+			var msg ChanInitMsg = <-chanChanHandler
+			log.Printf("Got chan for id %s\n", msg.id)
+			chanMap[msg.id] = msg.ch
+		}
+	}
+
+	go meme()
+
+	server := http.Server{
+		Addr:    "127.0.0.1:8081",
+		Handler: api,
+	}
+
+	upgrader.CheckOrigin = func(_ *http.Request) bool {
+		return true
+	}
+
+	log.Fatal(server.ListenAndServe())
 }
